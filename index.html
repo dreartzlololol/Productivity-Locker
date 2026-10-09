@@ -1,0 +1,717 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Productivity App Locker</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #050505;
+            --glass-bg: rgba(20, 20, 25, 0.65);
+            --glass-border: rgba(255, 255, 255, 0.08);
+            --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
+            --accent-1: #FF3366;
+            --accent-2: #20E3B2;
+            --accent-3: #8A2BE2;
+            --text-main: #FFFFFF;
+            --text-muted: #8892B0;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            min-height: 100vh;
+            overflow-x: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Animated Glowing Orbs Background */
+        .bg-orbs {
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            z-index: -1;
+            overflow: hidden;
+            background: #09090e;
+        }
+        
+        .orb {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(80px);
+            opacity: 0.6;
+            animation: float 20s infinite ease-in-out alternate;
+        }
+
+        .orb-1 {
+            width: 400px; height: 400px;
+            background: var(--accent-3);
+            top: -100px; left: -100px;
+        }
+        
+        .orb-2 {
+            width: 500px; height: 500px;
+            background: var(--accent-2);
+            bottom: -200px; right: -100px;
+            animation-delay: -5s;
+            opacity: 0.3;
+        }
+
+        .orb-3 {
+            width: 300px; height: 300px;
+            background: var(--accent-1);
+            top: 40%; left: 50%;
+            transform: translate(-50%, -50%);
+            animation-delay: -10s;
+            opacity: 0.4;
+        }
+
+        @keyframes float {
+            0% { transform: translate(0, 0) scale(1); }
+            100% { transform: translate(100px, 50px) scale(1.2); }
+        }
+
+        /* App Container */
+        .app-container {
+            width: 90%;
+            max-width: 1000px;
+            height: 90vh;
+            max-height: 800px;
+            display: grid;
+            grid-template-columns: 320px 1fr;
+            gap: 24px;
+        }
+
+        /* Glassmorphism Panels */
+        .glass-panel {
+            background: var(--glass-bg);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            box-shadow: var(--glass-shadow);
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .glass-panel::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+        }
+
+        h1, h2, h3 { font-weight: 600; letter-spacing: -0.5px; }
+        
+        .header {
+            margin-bottom: 24px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .header h1 {
+            font-size: 1.5rem;
+            background: linear-gradient(135deg, var(--text-main), var(--text-muted));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 12px;
+            background: rgba(32, 227, 178, 0.1);
+            border: 1px solid rgba(32, 227, 178, 0.2);
+            border-radius: 20px;
+            font-size: 0.8rem;
+            color: var(--accent-2);
+            margin-top: 12px;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .status-badge .dot {
+            width: 8px; height: 8px;
+            background: var(--accent-2);
+            border-radius: 50%;
+            box-shadow: 0 0 10px var(--accent-2);
+        }
+
+        /* Lists */
+        .app-list {
+            flex-grow: 1;
+            overflow-y: auto;
+            margin: 16px 0;
+            padding-right: 8px;
+        }
+
+        .app-list::-webkit-scrollbar { width: 6px; }
+        .app-list::-webkit-scrollbar-track { background: transparent; }
+        .app-list::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
+
+        .app-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 16px;
+            background: rgba(0,0,0,0.2);
+            border-radius: 12px;
+            margin-bottom: 8px;
+            border: 1px solid transparent;
+            transition: all 0.3s ease;
+        }
+
+        .app-item:hover {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            transform: translateX(4px);
+        }
+
+        .app-name { font-family: 'JetBrains Mono', monospace; font-size: 0.9rem; }
+
+        .btn-remove {
+            background: rgba(255, 51, 102, 0.1);
+            color: var(--accent-1);
+            border: none;
+            padding: 6px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-family: 'Outfit', sans-serif;
+            font-weight: 600;
+            transition: all 0.2s ease;
+        }
+
+        .btn-remove:hover { background: var(--accent-1); color: white; }
+
+        /* Inputs & Buttons */
+        .input-group {
+            display: flex;
+            gap: 8px;
+            margin-top: auto;
+        }
+
+        input[type="text"] {
+            flex-grow: 1;
+            background: rgba(0,0,0,0.3);
+            border: 1px solid rgba(255,255,255,0.1);
+            padding: 12px 16px;
+            border-radius: 12px;
+            color: white;
+            font-family: 'JetBrains Mono', monospace;
+            outline: none;
+            transition: border 0.3s ease;
+        }
+
+        input[type="text"]:focus { border-color: var(--accent-3); }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #8A2BE2, #4B0082);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            box-shadow: 0 4px 15px rgba(138, 43, 226, 0.4);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(138, 43, 226, 0.6);
+        }
+
+        /* Grid Right Side */
+        .main-content {
+            display: grid;
+            grid-template-rows: auto auto 1fr;
+            gap: 24px;
+        }
+        
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+            margin-top: 16px;
+        }
+
+        .stat-card {
+            background: rgba(0,0,0,0.2);
+            padding: 20px;
+            border-radius: 16px;
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 2.5rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--accent-2), #00A8FF);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            line-height: 1;
+            margin-bottom: 8px;
+        }
+
+        .stat-label { font-size: 0.85rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; }
+
+        /* Settings Grid */
+        .settings-form {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-top: 16px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .form-group label { font-size: 0.9rem; color: var(--text-muted); }
+        
+        select {
+            background: rgba(0,0,0,0.3);
+            border: 1px solid rgba(255,255,255,0.1);
+            color: white;
+            padding: 10px;
+            border-radius: 8px;
+            outline: none;
+            font-family: 'Outfit';
+        }
+        
+        .checkbox-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+        }
+
+        .checkbox-label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.9rem;
+            cursor: pointer;
+        }
+        
+        .checkbox-label input[type="checkbox"] {
+            -webkit-appearance: none;
+            appearance: none;
+            min-width: 20px;
+            width: 20px; 
+            height: 20px;
+            border-radius: 6px;
+            background: rgba(0,0,0,0.3);
+            border: 2px solid rgba(255,255,255,0.2);
+            cursor: pointer;
+            position: relative;
+            transition: all 0.2s ease;
+            margin: 0;
+            padding: 0;
+        }
+
+        .checkbox-label input[type="checkbox"]:checked {
+            background: var(--accent-3);
+            border-color: var(--accent-3);
+        }
+
+        .checkbox-label input[type="checkbox"]:checked::after {
+            content: '✓';
+            position: absolute;
+            color: white;
+            font-size: 14px;
+            font-weight: bold;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        /* Math Puzzle Modal */
+        #puzzle-modal {
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(0,0,0,0.8);
+            backdrop-filter: blur(10px);
+            z-index: 1000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .puzzle-card {
+            background: var(--glass-bg);
+            border: 1px solid var(--accent-3);
+            box-shadow: 0 0 40px rgba(138, 43, 226, 0.4);
+            border-radius: 24px;
+            padding: 40px;
+            width: 90%;
+            max-width: 500px;
+            text-align: center;
+            transform: scale(0.9);
+            opacity: 0;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        #puzzle-modal.active { display: flex; }
+        #puzzle-modal.active .puzzle-card, #browse-modal.active .puzzle-card { transform: scale(1); opacity: 1; }
+
+        .puzzle-app-name { color: var(--accent-1); font-family: 'JetBrains Mono'; margin-bottom: 16px; }
+        .puzzle-question { font-size: 2rem; font-weight: 800; margin: 24px 0; letter-spacing: 2px; }
+        
+        .puzzle-input {
+            font-size: 1.5rem;
+            text-align: center;
+            width: 100%;
+            margin-bottom: 24px;
+            padding: 16px;
+        }
+        
+        .btn-solve {
+            width: 100%;
+            padding: 16px;
+            font-size: 1.1rem;
+            background: linear-gradient(135deg, var(--accent-2), #00A8FF);
+            box-shadow: 0 4px 15px rgba(32, 227, 178, 0.4);
+        }
+
+        .btn-solve:hover { box-shadow: 0 6px 20px rgba(32, 227, 178, 0.6); }
+    </style>
+</head>
+<body>
+    <div class="bg-orbs">
+        <div class="orb orb-1"></div>
+        <div class="orb orb-2"></div>
+        <div class="orb orb-3"></div>
+    </div>
+
+    <div class="app-container">
+        <!-- Sidebar: Blocked Apps -->
+        <div class="glass-panel">
+            <div class="header">
+                <h1>App Locker</h1>
+                <div class="status-badge">
+                    <div class="dot"></div> Monitoring Active
+                </div>
+            </div>
+            
+            <h3 style="margin-top: 8px; font-size: 1rem; color: var(--text-muted);">Blocked Apps</h3>
+            
+            <div class="app-list" id="app-list">
+                <!-- Apps will be injected here -->
+            </div>
+
+            <div class="input-group" style="flex-direction: column; gap: 12px;">
+                <input type="text" id="app-input" placeholder="e.g. chrome.exe" onkeypress="if(event.key==='Enter') addApp()" style="width: 100%; box-sizing: border-box;">
+                <div style="display: flex; gap: 12px;">
+                    <button class="btn-primary" style="flex: 1; background: rgba(255,255,255,0.1); box-shadow: none; font-size: 0.85rem;" onclick="browseApp()">Running</button>
+                    <button class="btn-primary" style="flex: 1; background: rgba(255,255,255,0.1); box-shadow: none; font-size: 0.85rem;" onclick="browseFile()">File</button>
+                    <button class="btn-primary" style="flex: 1; font-size: 0.85rem;" onclick="addApp()">Add</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Dashboard Card -->
+            <div class="glass-panel" style="justify-content: center;">
+                <h2>Daily Practice Dashboard</h2>
+                <div class="dashboard-grid">
+                    <div class="stat-card">
+                        <div class="stat-value" id="streak-val">0</div>
+                        <div class="stat-label">Day Streak 🔥</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="total-val" style="background: linear-gradient(135deg, var(--accent-3), #FF3366); -webkit-background-clip: text;">0</div>
+                        <div class="stat-label">Challenges Completed</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Settings Card -->
+            <div class="glass-panel">
+                <h2>Locker Settings</h2>
+                <p style="color: var(--text-muted); font-size: 0.9rem; margin-top: 8px;">Configure the math challenges required to unlock applications.</p>
+                
+                <div class="settings-form">
+                    <div class="form-group">
+                        <label>Math Difficulty</label>
+                        <select id="setting-difficulty" onchange="saveSettings()">
+                            <option value="easy">Easy</option>
+                            <option value="medium">Medium</option>
+                            <option value="hard">Hard</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Questions to Unlock</label>
+                        <select id="setting-questions" onchange="saveSettings()">
+                            <option value="1">1 Question</option>
+                            <option value="3">3 Questions</option>
+                            <option value="5">5 Questions</option>
+                            <option value="10">10 Questions</option>
+                            <option value="15">15 Questions</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group" style="grid-column: span 2;">
+                        <label>Problem Types</label>
+                        <div class="checkbox-grid">
+                            <label class="checkbox-label"><input type="checkbox" value="addition" onchange="saveSettings()"> Addition</label>
+                            <label class="checkbox-label"><input type="checkbox" value="subtraction" onchange="saveSettings()"> Subtraction</label>
+                            <label class="checkbox-label"><input type="checkbox" value="multiplication" onchange="saveSettings()"> Multiplication</label>
+                            <label class="checkbox-label"><input type="checkbox" value="division" onchange="saveSettings()"> Division</label>
+                            <label class="checkbox-label"><input type="checkbox" value="factoring" onchange="saveSettings()"> Factoring</label>
+                            <label class="checkbox-label"><input type="checkbox" value="geometry" onchange="saveSettings()"> Geometry</label>
+                            <label class="checkbox-label"><input type="checkbox" value="formulas" onchange="saveSettings()"> Formulas</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Strict Mode Card -->
+            <div class="glass-panel" style="border-color: rgba(255, 51, 102, 0.3);">
+                <h2><span style="color: var(--accent-1);">⚠️</span> Panic Button (Strict Mode)</h2>
+                <p style="color: var(--text-muted); font-size: 0.9rem; margin-top: 8px;">Disable ALL math unlocks for a set time. You will not be able to bypass this.</p>
+                
+                <div class="input-group" style="margin-top: 16px;">
+                    <select id="strict-hours" style="flex-grow: 1;">
+                        <option value="1">1 Hour</option>
+                        <option value="2">2 Hours</option>
+                        <option value="4">4 Hours</option>
+                        <option value="8">8 Hours</option>
+                    </select>
+                    <button class="btn-primary" style="background: linear-gradient(135deg, #FF3366, #cc0033);" onclick="activateStrictMode()">Activate Strict Mode</button>
+                </div>
+                <p id="strict-status" style="color: var(--accent-1); font-weight: bold; margin-top: 8px; font-size: 0.9rem;"></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Math Puzzle Modal -->
+    <div id="puzzle-modal">
+        <div class="puzzle-card">
+            <h2 style="color: var(--text-muted); font-size: 1rem; text-transform: uppercase; letter-spacing: 2px;">App Locked</h2>
+            <div class="puzzle-app-name" id="puzzle-app-name">chrome.exe</div>
+            <p id="puzzle-progress" style="color: var(--accent-2); font-weight: bold; margin-bottom: 10px;">Progress: 0 / 5 solved</p>
+            
+            <div class="puzzle-question" id="puzzle-question">45 × 12 = ?</div>
+            
+            <input type="text" class="puzzle-input" id="puzzle-answer" placeholder="Your Answer" autocomplete="off" onkeypress="if(event.key==='Enter') submitAnswer()">
+            <button class="btn-primary btn-solve" id="puzzle-submit-btn" onclick="submitAnswer()">Submit Answer</button>
+            
+            <p id="puzzle-error" style="color: var(--accent-1); margin-top: 16px; font-weight: bold; height: 20px;"></p>
+        </div>
+    </div>
+
+    <!-- Browse Modal -->
+    <div id="browse-modal" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.8); backdrop-filter: blur(10px); z-index: 1000; display: none; align-items: center; justify-content: center;">
+        <div class="puzzle-card" style="max-height: 80vh; display: flex; flex-direction: column; width: 90%; max-width: 600px; padding: 24px;">
+            <h2 style="margin-bottom: 16px;">Select Running App</h2>
+            <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 16px;">Choose an app from the list of currently running processes to block it.</p>
+            <div id="running-apps-list" style="overflow-y: auto; flex-grow: 1; display: flex; flex-direction: column; gap: 8px; padding-right: 8px;">
+                <p style="color: var(--text-muted);">Loading apps...</p>
+            </div>
+            <button class="btn-primary" style="margin-top: 24px; background: rgba(255,255,255,0.1); box-shadow: none;" onclick="hideBrowseModal()">Cancel</button>
+        </div>
+    </div>
+
+    <script>
+        // Python interoperability via pywebview
+        window.addEventListener('pywebviewready', function() {
+            pywebview.api.get_config().then(updateUIFromConfig);
+        });
+
+        function updateUIFromConfig(config) {
+            // Update Apps
+            const list = document.getElementById('app-list');
+            list.innerHTML = '';
+            
+            if (config.blocked_apps.length === 0) {
+                list.innerHTML = '<p style="color: var(--text-muted); text-align: center; margin-top: 20px;">No blocked apps.</p>';
+            } else {
+                config.blocked_apps.forEach(app => {
+                    const div = document.createElement('div');
+                    div.className = 'app-item';
+                    div.innerHTML = `
+                        <span class="app-name">${app}</span>
+                        <button class="btn-remove" onclick="removeApp('${app}')">Remove</button>
+                    `;
+                    list.appendChild(div);
+                });
+            }
+
+            // Update Dashboard
+            document.getElementById('streak-val').innerText = config.current_streak || 0;
+            document.getElementById('total-val').innerText = (config.challenge_history || []).length;
+
+            // Update Settings
+            document.getElementById('setting-difficulty').value = config.difficulty || 'medium';
+            document.getElementById('setting-questions').value = config.required_questions || 5;
+            
+            const types = config.problem_types || [];
+            document.querySelectorAll('.checkbox-grid input').forEach(cb => {
+                cb.checked = types.includes(cb.value);
+            });
+
+            // Update Strict Mode Status
+            const now = Date.now() / 1000;
+            const strictUntil = config.strict_mode_until || 0;
+            const statusEl = document.getElementById('strict-status');
+            if (strictUntil > now) {
+                const d = new Date(strictUntil * 1000);
+                statusEl.innerText = `Active until ${d.toLocaleTimeString()}`;
+            } else {
+                statusEl.innerText = '';
+            }
+        }
+
+        function addApp() {
+            const input = document.getElementById('app-input');
+            const val = input.value.trim();
+            if(val) {
+                pywebview.api.add_app(val).then(updateUIFromConfig);
+                input.value = '';
+            }
+        }
+
+        function browseApp() {
+            document.getElementById('browse-modal').style.display = 'flex';
+            document.getElementById('browse-modal').classList.add('active'); // for animation
+            document.getElementById('running-apps-list').innerHTML = '<p style="color: var(--text-muted);">Loading apps...</p>';
+            
+            pywebview.api.get_running_apps().then(apps => {
+                const list = document.getElementById('running-apps-list');
+                list.innerHTML = '';
+                
+                if (!apps || apps.length === 0) {
+                    list.innerHTML = '<p style="color: var(--text-muted);">No apps found.</p>';
+                    return;
+                }
+                
+                apps.forEach(app => {
+                    const btn = document.createElement('button');
+                    btn.className = 'app-item';
+                    btn.style.width = '100%';
+                    btn.style.textAlign = 'left';
+                    btn.style.cursor = 'pointer';
+                    btn.style.fontFamily = "'JetBrains Mono', monospace";
+                    btn.style.background = 'rgba(255,255,255,0.05)';
+                    btn.style.border = '1px solid rgba(255,255,255,0.1)';
+                    btn.style.color = 'white';
+                    btn.style.padding = '12px 16px';
+                    btn.style.display = 'flex';
+                    btn.style.alignItems = 'center';
+                    btn.style.gap = '12px';
+                    
+                    let innerHTML = '';
+                    if (app.icon) {
+                        innerHTML += `<img src="${app.icon}" style="width: 24px; height: 24px; object-fit: contain;">`;
+                    } else {
+                        innerHTML += `<div style="width: 24px; height: 24px; background: rgba(255,255,255,0.2); border-radius: 4px;"></div>`;
+                    }
+                    innerHTML += `<span>${app.name}</span>`;
+                    btn.innerHTML = innerHTML;
+                    
+                    btn.onmouseover = () => { btn.style.background = 'rgba(255,255,255,0.15)'; };
+                    btn.onmouseout = () => { btn.style.background = 'rgba(255,255,255,0.05)'; };
+                    
+                    btn.onclick = () => {
+                        document.getElementById('app-input').value = app.name;
+                        hideBrowseModal();
+                    };
+                    list.appendChild(btn);
+                });
+            });
+        }
+
+        function browseFile() {
+            pywebview.api.browse_file().then(app_name => {
+                if (app_name) {
+                    document.getElementById('app-input').value = app_name;
+                }
+            });
+        }
+
+        function hideBrowseModal() {
+            document.getElementById('browse-modal').style.display = 'none';
+        }
+
+        function removeApp(app) {
+            pywebview.api.remove_app(app).then(updateUIFromConfig);
+        }
+
+        function saveSettings() {
+            const types = [];
+            document.querySelectorAll('.checkbox-grid input:checked').forEach(cb => types.push(cb.value));
+            
+            const config = {
+                difficulty: document.getElementById('setting-difficulty').value,
+                required_questions: parseInt(document.getElementById('setting-questions').value),
+                problem_types: types.length > 0 ? types : ['addition']
+            };
+            
+            pywebview.api.update_settings(config).then(updateUIFromConfig);
+        }
+
+        function activateStrictMode() {
+            const hours = parseInt(document.getElementById('strict-hours').value);
+            if (confirm(`Are you sure you want to disable ALL unlocks for ${hours} hour(s)? This cannot be bypassed.`)) {
+                pywebview.api.activate_strict_mode(hours).then(updateUIFromConfig);
+            }
+        }
+
+        // Modal API for Python to call
+        function showPuzzle(appName, question, progress) {
+            document.getElementById('puzzle-app-name').innerText = appName;
+            document.getElementById('puzzle-question').innerText = question;
+            document.getElementById('puzzle-progress').innerText = progress;
+            document.getElementById('puzzle-progress').style.display = 'block';
+            document.getElementById('puzzle-answer').value = '';
+            document.getElementById('puzzle-answer').style.display = 'block';
+            document.getElementById('puzzle-error').innerText = '';
+            document.getElementById('puzzle-submit-btn').style.display = 'block';
+            document.getElementById('puzzle-modal').classList.add('active');
+            setTimeout(() => document.getElementById('puzzle-answer').focus(), 100);
+        }
+
+        function showStrictModal(appName, msg) {
+            document.getElementById('puzzle-app-name').innerText = appName;
+            document.getElementById('puzzle-question').innerText = 'STRICT MODE';
+            document.getElementById('puzzle-progress').innerText = msg;
+            document.getElementById('puzzle-progress').style.color = 'var(--accent-1)';
+            document.getElementById('puzzle-progress').style.display = 'block';
+            
+            document.getElementById('puzzle-answer').style.display = 'none';
+            document.getElementById('puzzle-submit-btn').style.display = 'none';
+            document.getElementById('puzzle-error').innerText = '';
+            document.getElementById('puzzle-modal').classList.add('active');
+        }
+
+        function hidePuzzle() {
+            document.getElementById('puzzle-modal').classList.remove('active');
+        }
+
+        function showPuzzleError(msg, isSuccess=false) {
+            const err = document.getElementById('puzzle-error');
+            err.innerText = msg;
+            err.style.color = isSuccess ? 'var(--accent-2)' : 'var(--accent-1)';
+        }
+
+        function submitAnswer() {
+            const ans = document.getElementById('puzzle-answer').value;
+            pywebview.api.submit_answer(ans);
+        }
+    </script>
+</body>
+</html>

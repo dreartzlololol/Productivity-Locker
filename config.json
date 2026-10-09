@@ -1,0 +1,21 @@
+{
+  "blocked_apps": [],
+  "difficulty": "hard",
+  "unlock_duration_minutes": 26,
+  "unlocked_apps": {
+    "notepad.exe": 1783097891.7092214
+  },
+  "problem_types": [
+    "addition",
+    "subtraction",
+    "multiplication",
+    "division",
+    "factoring",
+    "geometry",
+    "formulas"
+  ],
+  "required_questions": 5,
+  "last_completed_challenge": "",
+  "current_streak": 0,
+  "challenge_history": []
+}
