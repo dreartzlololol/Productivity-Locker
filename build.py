@@ -33,6 +33,7 @@ def main():
         "--noconsole",
         "--name", "ProductivityLocker",
         "--clean",
+        "--icon", "app_icon.ico",
     ]
     
     # Add tips.json as a bundled data file if it exists
