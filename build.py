@@ -17,7 +17,8 @@ def main():
 
     # Get the project root directory (where this script is)
     project_dir = os.path.dirname(os.path.abspath(__file__))
-    app_path = os.path.join(project_dir, "app.py")
+    app_path = os.path.join(project_dir, "web_app.py")
+    index_path = os.path.join(project_dir, "index.html")
     tips_path = os.path.join(project_dir, "tips.json")
     
     if not os.path.exists(app_path):
@@ -38,6 +39,9 @@ def main():
     if os.path.exists(tips_path):
         # On Windows, the separator for --add-data is ';'
         pyinstaller_args.extend(["--add-data", f"{tips_path};."])
+        
+    if os.path.exists(index_path):
+        pyinstaller_args.extend(["--add-data", f"{index_path};."])
         
     pyinstaller_args.append(app_path)
     

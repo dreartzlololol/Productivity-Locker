@@ -407,8 +407,13 @@
             
             <h3 style="margin-top: 8px; font-size: 1rem; color: var(--text-muted);">Blocked Apps</h3>
             
-            <div class="app-list" id="app-list">
+            <div class="app-list" id="app-list" style="margin-bottom: 0;">
                 <!-- Apps will be injected here -->
+            </div>
+            
+            <h3 style="margin-top: 16px; margin-bottom: 8px; font-size: 1rem; color: var(--text-muted);">Unlocked Apps (Time Left)</h3>
+            <div class="app-list" id="unlocked-list" style="flex: 0 1 150px; min-height: 50px;">
+                <p style="color: var(--text-muted); text-align: center; margin-top: 10px; font-size: 0.85rem;">No active timers</p>
             </div>
 
             <div class="input-group" style="flex-direction: column; gap: 12px;">
@@ -500,17 +505,36 @@
 
     <!-- Math Puzzle Modal -->
     <div id="puzzle-modal">
-        <div class="puzzle-card">
+        <div class="puzzle-card" style="position: relative;">
+            <button id="emergency-btn" onclick="emergencyUnlock()" style="position: absolute; top: 16px; right: 16px; background: rgba(255,51,102,0.1); color: var(--accent-1); border: none; padding: 6px 12px; border-radius: 8px; cursor: pointer; font-size: 0.8rem; font-weight: bold; transition: all 0.2s;">🚨 Skip (PIN)</button>
             <h2 style="color: var(--text-muted); font-size: 1rem; text-transform: uppercase; letter-spacing: 2px;">App Locked</h2>
             <div class="puzzle-app-name" id="puzzle-app-name">chrome.exe</div>
             <p id="puzzle-progress" style="color: var(--accent-2); font-weight: bold; margin-bottom: 10px;">Progress: 0 / 5 solved</p>
             
+            <div id="puzzle-geometry" style="display: none; margin: 10px auto;"></div>
+            
             <div class="puzzle-question" id="puzzle-question">45 × 12 = ?</div>
             
-            <input type="text" class="puzzle-input" id="puzzle-answer" placeholder="Your Answer" autocomplete="off" onkeypress="if(event.key==='Enter') submitAnswer()">
+            <div id="puzzle-answer-container" style="display: flex; gap: 8px; justify-content: center; align-items: center; margin: 10px 0;">
+                <input type="text" class="puzzle-input" id="puzzle-answer" placeholder="Your Answer" autocomplete="off" onkeypress="if(event.key==='Enter') submitAnswer()">
+            </div>
+            
+            <div id="puzzle-factoring-container" style="display: none; gap: 8px; justify-content: center; align-items: center; margin: 10px 0;">
+                <span style="color: white; font-size: 1.2rem; font-weight: bold;">( x </span>
+                <input type="text" class="puzzle-input" id="puzzle-ans1" style="width: 60px; text-align: center; padding: 10px;" autocomplete="off" onkeypress="if(event.key==='Enter') submitAnswer()">
+                <span style="color: white; font-size: 1.2rem; font-weight: bold;"> ) ( x </span>
+                <input type="text" class="puzzle-input" id="puzzle-ans2" style="width: 60px; text-align: center; padding: 10px;" autocomplete="off" onkeypress="if(event.key==='Enter') submitAnswer()">
+                <span style="color: white; font-size: 1.2rem; font-weight: bold;"> ) = 0</span>
+            </div>
+            
             <button class="btn-primary btn-solve" id="puzzle-submit-btn" onclick="submitAnswer()">Submit Answer</button>
             
             <p id="puzzle-error" style="color: var(--accent-1); margin-top: 16px; font-weight: bold; height: 20px;"></p>
+            
+            <div id="puzzle-tip" style="margin-top: 16px; padding: 12px; background: rgba(0,0,0,0.3); border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); text-align: left; display: none;">
+                <h4 id="puzzle-tip-title" style="color: var(--accent-3); font-size: 0.9rem; margin-bottom: 4px;">💡 Tip</h4>
+                <p id="puzzle-tip-desc" style="color: var(--text-muted); font-size: 0.85rem; line-height: 1.4;"></p>
+            </div>
         </div>
     </div>
 
@@ -672,17 +696,138 @@
         }
 
         // Modal API for Python to call
-        function showPuzzle(appName, question, progress) {
+        function showPuzzle(appName, question, progress, shapeData, tipData, isFactoring) {
             document.getElementById('puzzle-app-name').innerText = appName;
             document.getElementById('puzzle-question').innerText = question;
             document.getElementById('puzzle-progress').innerText = progress;
             document.getElementById('puzzle-progress').style.display = 'block';
-            document.getElementById('puzzle-answer').value = '';
-            document.getElementById('puzzle-answer').style.display = 'block';
+            
+            if (isFactoring) {
+                document.getElementById('puzzle-answer-container').style.display = 'none';
+                document.getElementById('puzzle-factoring-container').style.display = 'flex';
+                document.getElementById('puzzle-ans1').value = '';
+                document.getElementById('puzzle-ans2').value = '';
+                setTimeout(() => document.getElementById('puzzle-ans1').focus(), 100);
+            } else {
+                document.getElementById('puzzle-factoring-container').style.display = 'none';
+                document.getElementById('puzzle-answer-container').style.display = 'flex';
+                document.getElementById('puzzle-answer').value = '';
+                setTimeout(() => document.getElementById('puzzle-answer').focus(), 100);
+            }
+            
             document.getElementById('puzzle-error').innerText = '';
             document.getElementById('puzzle-submit-btn').style.display = 'block';
+            
+            document.getElementById('puzzle-geometry').style.display = 'none';
+            if (shapeData) {
+                renderGeometry(shapeData);
+            }
+            
+            if (tipData && tipData.title) {
+                document.getElementById('puzzle-tip-title').innerText = "💡 " + tipData.title;
+                document.getElementById('puzzle-tip-desc').innerText = tipData.desc;
+                document.getElementById('puzzle-tip').style.display = 'block';
+            } else {
+                document.getElementById('puzzle-tip').style.display = 'none';
+            }
+            
             document.getElementById('puzzle-modal').classList.add('active');
-            setTimeout(() => document.getElementById('puzzle-answer').focus(), 100);
+        }
+
+        function renderGeometry(shapeData) {
+            const container = document.getElementById('puzzle-geometry');
+            container.style.display = 'block';
+            container.innerHTML = '';
+            const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+            svg.setAttribute("width", "200");
+            svg.setAttribute("height", "120");
+            svg.style.background = "rgba(0,0,0,0.2)";
+            svg.style.borderRadius = "8px";
+            
+            if (shapeData.type === 'rectangle') {
+                const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+                rect.setAttribute("x", "50");
+                rect.setAttribute("y", "30");
+                rect.setAttribute("width", "100");
+                rect.setAttribute("height", "60");
+                rect.setAttribute("fill", "transparent");
+                rect.setAttribute("stroke", "white");
+                rect.setAttribute("stroke-width", "2");
+                svg.appendChild(rect);
+                
+                const textW = document.createElementNS("http://www.w3.org/2000/svg", "text");
+                textW.setAttribute("x", "100");
+                textW.setAttribute("y", "105");
+                textW.setAttribute("fill", "white");
+                textW.setAttribute("text-anchor", "middle");
+                textW.textContent = shapeData.w;
+                svg.appendChild(textW);
+                
+                const textH = document.createElementNS("http://www.w3.org/2000/svg", "text");
+                textH.setAttribute("x", "155");
+                textH.setAttribute("y", "65");
+                textH.setAttribute("fill", "white");
+                textH.textContent = shapeData.h;
+                svg.appendChild(textH);
+            } else if (shapeData.type === 'square') {
+                const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+                rect.setAttribute("x", "65");
+                rect.setAttribute("y", "25");
+                rect.setAttribute("width", "70");
+                rect.setAttribute("height", "70");
+                rect.setAttribute("fill", "transparent");
+                rect.setAttribute("stroke", "white");
+                rect.setAttribute("stroke-width", "2");
+                svg.appendChild(rect);
+                
+                const textS1 = document.createElementNS("http://www.w3.org/2000/svg", "text");
+                textS1.setAttribute("x", "100");
+                textS1.setAttribute("y", "110");
+                textS1.setAttribute("fill", "white");
+                textS1.setAttribute("text-anchor", "middle");
+                textS1.textContent = shapeData.s;
+                svg.appendChild(textS1);
+                
+                const textS2 = document.createElementNS("http://www.w3.org/2000/svg", "text");
+                textS2.setAttribute("x", "140");
+                textS2.setAttribute("y", "65");
+                textS2.setAttribute("fill", "white");
+                textS2.textContent = shapeData.s;
+                svg.appendChild(textS2);
+            } else if (shapeData.type === 'triangle_area') {
+                const poly = document.createElementNS("http://www.w3.org/2000/svg", "polygon");
+                poly.setAttribute("points", "50,90 150,90 90,30");
+                poly.setAttribute("fill", "transparent");
+                poly.setAttribute("stroke", "white");
+                poly.setAttribute("stroke-width", "2");
+                svg.appendChild(poly);
+                
+                const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+                line.setAttribute("x1", "90");
+                line.setAttribute("y1", "30");
+                line.setAttribute("x2", "90");
+                line.setAttribute("y2", "90");
+                line.setAttribute("stroke", "var(--accent-2)");
+                line.setAttribute("stroke-width", "1.5");
+                line.setAttribute("stroke-dasharray", "4,4");
+                svg.appendChild(line);
+                
+                const textB = document.createElementNS("http://www.w3.org/2000/svg", "text");
+                textB.setAttribute("x", "100");
+                textB.setAttribute("y", "105");
+                textB.setAttribute("fill", "white");
+                textB.setAttribute("text-anchor", "middle");
+                textB.textContent = "base=" + shapeData.b;
+                svg.appendChild(textB);
+                
+                const textH = document.createElementNS("http://www.w3.org/2000/svg", "text");
+                textH.setAttribute("x", "55");
+                textH.setAttribute("y", "65");
+                textH.setAttribute("fill", "var(--accent-2)");
+                textH.textContent = "h=" + shapeData.h;
+                svg.appendChild(textH);
+            }
+            container.appendChild(svg);
         }
 
         function showStrictModal(appName, msg) {
@@ -692,9 +837,12 @@
             document.getElementById('puzzle-progress').style.color = 'var(--accent-1)';
             document.getElementById('puzzle-progress').style.display = 'block';
             
-            document.getElementById('puzzle-answer').style.display = 'none';
+            document.getElementById('puzzle-answer-container').style.display = 'none';
+            document.getElementById('puzzle-factoring-container').style.display = 'none';
             document.getElementById('puzzle-submit-btn').style.display = 'none';
             document.getElementById('puzzle-error').innerText = '';
+            document.getElementById('puzzle-geometry').style.display = 'none';
+            document.getElementById('puzzle-tip').style.display = 'none';
             document.getElementById('puzzle-modal').classList.add('active');
         }
 
@@ -709,9 +857,57 @@
         }
 
         function submitAnswer() {
-            const ans = document.getElementById('puzzle-answer').value;
+            let ans = "";
+            if (document.getElementById('puzzle-factoring-container').style.display === 'flex') {
+                const ans1 = document.getElementById('puzzle-ans1').value;
+                const ans2 = document.getElementById('puzzle-ans2').value;
+                ans = ans1 + "," + ans2;
+            } else {
+                ans = document.getElementById('puzzle-answer').value;
+            }
             pywebview.api.submit_answer(ans);
         }
+
+        function emergencyUnlock() {
+            pywebview.api.emergency_unlock();
+        }
+
+        setInterval(() => {
+            if (window.pywebview && pywebview.api) {
+                pywebview.api.get_state().then(state => {
+                    const unlockedList = document.getElementById('unlocked-list');
+                    if (!unlockedList) return;
+                    
+                    unlockedList.innerHTML = '';
+                    const unlocked = state.currently_unlocked || {};
+                    const now = Date.now() / 1000;
+                    let count = 0;
+                    
+                    for (const [app, exp] of Object.entries(unlocked)) {
+                        if (exp > now) {
+                            count++;
+                            const div = document.createElement('div');
+                            div.className = 'app-item';
+                            div.style.background = 'rgba(32, 227, 178, 0.1)';
+                            div.style.borderColor = 'rgba(32, 227, 178, 0.3)';
+                            
+                            const mins = Math.floor((exp - now) / 60);
+                            const secs = Math.floor((exp - now) % 60);
+                            const timeStr = `${mins}:${secs.toString().padStart(2, '0')}`;
+                            
+                            div.innerHTML = `
+                                <span class="app-name">${app}</span>
+                                <span style="color: var(--accent-2); font-family: monospace; font-weight: bold; font-size: 1.1rem;">${timeStr}</span>
+                            `;
+                            unlockedList.appendChild(div);
+                        }
+                    }
+                    if (count === 0) {
+                        unlockedList.innerHTML = '<p style="color: var(--text-muted); text-align: center; margin-top: 10px; font-size: 0.85rem;">No active timers</p>';
+                    }
+                }).catch(e => console.log(e));
+            }
+        }, 1000);
     </script>
 </body>
 </html>
